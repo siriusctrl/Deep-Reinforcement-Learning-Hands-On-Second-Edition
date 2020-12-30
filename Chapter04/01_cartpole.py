@@ -11,6 +11,8 @@ import torch.optim as optim
 
 HIDDEN_SIZE = 128
 BATCH_SIZE = 16
+# only make the action that has reward in the 70th percentile or higher to
+# have high probability to occur
 PERCENTILE = 70
 
 
@@ -35,30 +37,43 @@ def iterate_batches(env, net, batch_size):
     batch = []
     episode_reward = 0.0
     episode_steps = []
+    # this obs gives the initial observation (4 floats) of the CarPole
     obs = env.reset()
     sm = nn.Softmax(dim=1)
     while True:
         obs_v = torch.FloatTensor([obs])
+
+        # NOTE: tensor([[0.2580, 0.2429, 0.2461, 0.2530]])
         act_probs_v = sm(net(obs_v))
+        # NOTE: array([0.258016  , 0.24285506, 0.24610573, 0.25302318], dtype=float32)
         act_probs = act_probs_v.data.numpy()[0]
+
         action = np.random.choice(len(act_probs), p=act_probs)
         next_obs, reward, is_done, _ = env.step(action)
         episode_reward += reward
         step = EpisodeStep(observation=obs, action=action)
         episode_steps.append(step)
+
         if is_done:
             e = Episode(reward=episode_reward, steps=episode_steps)
             batch.append(e)
             episode_reward = 0.0
             episode_steps = []
             next_obs = env.reset()
+
             if len(batch) == batch_size:
                 yield batch
                 batch = []
+        
         obs = next_obs
 
 
 def filter_batch(batch, percentile):
+    '''
+    What is doing here is that we examine all the episode, and only make the 
+    actions in the episodes which in or above 70th percentile to occur more
+    probable
+    '''
     rewards = list(map(lambda s: s.reward, batch))
     reward_bound = np.percentile(rewards, percentile)
     reward_mean = float(np.mean(rewards))
@@ -68,6 +83,7 @@ def filter_batch(batch, percentile):
     for reward, steps in batch:
         if reward < reward_bound:
             continue
+        # extend: put a iterable at the back of a list
         train_obs.extend(map(lambda step: step.observation, steps))
         train_act.extend(map(lambda step: step.action, steps))
 
@@ -78,7 +94,7 @@ def filter_batch(batch, percentile):
 
 if __name__ == "__main__":
     env = gym.make("CartPole-v0")
-    # env = gym.wrappers.Monitor(env, directory="mon", force=True)
+    env = gym.wrappers.Monitor(env, directory="mon", force=True)
     obs_size = env.observation_space.shape[0]
     n_actions = env.action_space.n
 
