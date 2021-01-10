@@ -39,6 +39,8 @@ class MaxAndSkipEnv(gym.Wrapper):
         done = None
         for _ in range(self._skip):
             obs, reward, done, info = self.env.step(action)
+            # retain the most recent maxlen (here is 2) frame
+            # in the total skips (here is 4)
             self._obs_buffer.append(obs)
             total_reward += reward
             if done:
@@ -55,6 +57,11 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 
 class ProcessFrame84(gym.ObservationWrapper):
+    """
+    Convert input observations from the emulator, which normally 
+    has a resolution of 210×160 pixels with RGB color channels, to a grayscale 84×84 image
+    """
+
     def __init__(self, env=None):
         super(ProcessFrame84, self).__init__(env)
         self.observation_space = gym.spaces.Box(
@@ -95,6 +102,9 @@ class ImageToPyTorch(gym.ObservationWrapper):
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
+    """
+    from 0-255 to 0-1
+    """
     def observation(self, obs):
         return np.array(obs).astype(np.float32) / 255.0
 
@@ -104,6 +114,8 @@ class BufferWrapper(gym.ObservationWrapper):
         super(BufferWrapper, self).__init__(env)
         self.dtype = dtype
         old_space = env.observation_space
+        # repeat here is compact a n * array of low(high) into 
+        # a single array
         self.observation_space = gym.spaces.Box(
             old_space.low.repeat(n_steps, axis=0),
             old_space.high.repeat(n_steps, axis=0), dtype=dtype)

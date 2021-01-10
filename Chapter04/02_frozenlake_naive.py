@@ -19,7 +19,10 @@ class DiscreteOneHotWrapper(gym.ObservationWrapper):
         super(DiscreteOneHotWrapper, self).__init__(env)
         assert isinstance(env.observation_space,
                           gym.spaces.Discrete)
+        # number of possible value in observation space
         shape = (env.observation_space.n, )
+        # a array of data that contains 'shape' numbers with each number
+        # to be 0 (the min) or 1 (the max)
         self.observation_space = gym.spaces.Box(
             0.0, 1.0, shape, dtype=np.float32)
 
@@ -52,6 +55,7 @@ def iterate_batches(env, net, batch_size):
     episode_steps = []
     obs = env.reset()
     sm = nn.Softmax(dim=1)
+
     while True:
         obs_v = torch.FloatTensor([obs])
         act_probs_v = sm(net(obs_v))
@@ -91,7 +95,7 @@ def filter_batch(batch, percentile):
 
 if __name__ == "__main__":
     env = DiscreteOneHotWrapper(gym.make("FrozenLake-v0"))
-    # env = gym.wrappers.Monitor(env, directory="mon", force=True)
+    env = gym.wrappers.Monitor(env, directory="mon", force=True)
     obs_size = env.observation_space.shape[0]
     n_actions = env.action_space.n
 

@@ -13,6 +13,8 @@ import torch.optim as optim
 
 from tensorboardX import SummaryWriter
 
+# my import for debug
+import time
 
 DEFAULT_ENV_NAME = "PongNoFrameskip-v4"
 MEAN_REWARD_BOUND = 19
@@ -75,6 +77,8 @@ class Agent:
             state_a = np.array([self.state], copy=False)
             state_v = torch.tensor(state_a).to(device)
             q_vals_v = net(state_v)
+
+            # the following are the same as argmax
             _, act_v = torch.max(q_vals_v, dim=1)
             action = int(act_v.item())
 
@@ -103,8 +107,20 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
     rewards_v = torch.tensor(rewards).to(device)
     done_mask = torch.BoolTensor(dones).to(device)
 
+    # print(net(states_v))
+    # print("------------------------")
+    # print(actions_v.unsqueeze(-1))
+    # print("------------------------")
+    # print(net(states_v).gather(
+    #     1, actions_v.unsqueeze(-1)))
+
+    # time.sleep(1000)
+
+    # select the corresponding predict q-value for the action we take in that state
     state_action_values = net(states_v).gather(
         1, actions_v.unsqueeze(-1)).squeeze(-1)
+    
+
     with torch.no_grad():
         next_state_values = tgt_net(next_states_v).max(1)[0]
         next_state_values[done_mask] = 0.0
@@ -152,6 +168,7 @@ if __name__ == "__main__":
                       frame_idx / EPSILON_DECAY_LAST_FRAME)
 
         reward = agent.play_step(net, epsilon, device=device)
+        # not None only if this is the last step
         if reward is not None:
             total_rewards.append(reward)
             speed = (frame_idx - ts_frame) / (time.time() - ts)
