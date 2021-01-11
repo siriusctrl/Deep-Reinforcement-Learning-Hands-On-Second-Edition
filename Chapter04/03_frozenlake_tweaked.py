@@ -73,7 +73,7 @@ def iterate_batches(env, net, batch_size):
 
 def filter_batch(batch, percentile):
     filter_fun = lambda s: s.reward * (GAMMA ** len(s.steps))
-    # apply this discount to panalize longer run
+    # apply this discount to penalize longer run
     disc_rewards = list(map(filter_fun, batch))
     reward_bound = np.percentile(disc_rewards, percentile)
 

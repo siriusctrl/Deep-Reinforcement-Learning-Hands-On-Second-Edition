@@ -130,6 +130,7 @@ class EpsilonTracker:
 
 def batch_generator(buffer: ptan.experience.ExperienceReplayBuffer,
                     initial: int, batch_size: int):
+    # this line make sure the initial size of the buffer
     buffer.populate(initial)
     while True:
         buffer.populate(1)
